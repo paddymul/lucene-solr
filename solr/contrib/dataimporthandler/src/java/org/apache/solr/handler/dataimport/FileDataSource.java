@@ -46,6 +46,7 @@ import static org.apache.solr.handler.dataimport.DataImportHandlerException.SEVE
  */
 public class FileDataSource extends DataSource<Reader> {
   public static final String BASE_PATH = "basePath";
+  public static final String ALLOW_NON_FILE = "allowNonFile";
 
   /**
    * The basePath for this data source
@@ -58,12 +59,15 @@ public class FileDataSource extends DataSource<Reader> {
   protected String encoding = null;
 
   private static final Logger LOG = LoggerFactory.getLogger(FileDataSource.class);
-
+  private boolean allowNonFile = false;
   @Override
   public void init(Context context, Properties initProps) {
     basePath = initProps.getProperty(BASE_PATH);
     if (initProps.get(URLDataSource.ENCODING) != null)
       encoding = initProps.getProperty(URLDataSource.ENCODING);
+    if (initProps.get(ALLOW_NON_FILE) != null && initProps.get(ALLOW_NON_FILE).equals("true")){
+        allowNonFile = true;
+    }
   }
 
   /**
@@ -82,7 +86,7 @@ public class FileDataSource extends DataSource<Reader> {
    */
   @Override
   public Reader getData(String query) {
-    File f = getFile(basePath,query);
+    File f = getFile(basePath, query, allowNonFile);
     try {
       return openStream(f);
     } catch (Exception e) {
@@ -108,6 +112,29 @@ public class FileDataSource extends DataSource<Reader> {
           return  file0;
         }
 
+      throw new FileNotFoundException("Could not find file: " + query);
+    } catch (FileNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  static File getFile(String basePath, String query, boolean allowNonFile) {
+    try {
+      File file0 = new File(query);
+      File file = file0;
+
+      if (!file.isAbsolute())
+        file = new File(basePath + query);
+
+      if ((allowNonFile || file.isFile()) && file.canRead()) {
+        LOG.debug("Accessing File: " + file.toString());
+        return file;
+      } else if (file != file0) {
+        if (file0.canRead() && (allowNonFile || file0.isFile())) {
+          LOG.debug("Accessing File0: " + file0.toString());
+          return  file0;
+        }
+      }
       throw new FileNotFoundException("Could not find file: " + query);
     } catch (FileNotFoundException e) {
       throw new RuntimeException(e);
