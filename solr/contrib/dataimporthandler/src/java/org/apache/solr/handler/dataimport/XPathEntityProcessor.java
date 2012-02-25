@@ -219,6 +219,8 @@ public class XPathEntityProcessor extends EntityProcessorBase {
   @SuppressWarnings("unchecked")
   private Map<String, Object> fetchNextRow() {
     Map<String, Object> r = null;
+      try {
+
     while (true) {
       if (rowIterator == null)
         initQuery(context.replaceTokens(context.getEntityAttribute(URL)));
@@ -246,6 +248,10 @@ public class XPathEntityProcessor extends EntityProcessorBase {
       addCommonFields(r);
       return r;
     }
+      } catch (java.lang.Exception e){
+          System.out.println(e);
+          return r;
+      }
   }
 
   private void addNamespace() {
